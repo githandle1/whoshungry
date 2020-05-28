@@ -1,0 +1,48 @@
+import csv
+from sklearn.svm import SVR
+import numpy as np
+import matplotlib.pyplot as plt #(more convenient to call it as a function)
+
+dates = []
+prices = []
+
+HistoricalQuotes = "/Users/mayabakir/Desktop/HistoricalQuotes.csv"
+
+
+def get_data(HistoricalQuotes): #argument of get_data function will be the name of the stock prices csv file
+    with open(HistoricalQuotes, 'r') as csvfile: #open our file and assign it to csv as file variable, open statement extracts content from our file and reads it
+        csvFileReader = csv.reader(csvfile) #reader method, allows us to iterate over every row in our csv file
+        next(csvFileReader) #return a string for each line using next method, call the next method first to skip the first row since it's just column names
+        for row in csvFileReader:  #now for each row in our csvFileReader, we'll add both the date and price values to our respective lists
+            dates.append(int(row[0].split("/")))
+            prices.append(float(row[3].split("$")))
+            #append function allows us to add an item to the end of our list, only want the day of the month so get first column in our row #  #recall: int is a number without a decimal point. A float is a floating-point number, which means it is a number that has a decimal pla
+    return
+
+def predict_prices(dates, prices, x): #using numpy to format our list into an nx1 matrix
+    dates = np.reshape(dates,(len(dates), 1)) #3 parameters are list we want to reshape, the new shape ((len(dates) 1-d array, size of our dates list), and order of elements (1)
+    svr_lin = SVR(kernel = 'linear', C=1e3)  #using support vector regression, uses space between data points as a margin of error and thus predicts most likely next data point in a data set 
+                  #want 2 things when using SVR, line with largest minimum margin and a line that correctly separates as many instances as possible, C determines how much 
+                  
+    svr_poly = SVR(kernel = 'poly', C=1e2, degree = 2) #try both optimizations since, one is guaranteed to work
+    svr_rbf= SVR(kernel= 'rbf', C=1e3, gamma=0.1) #rbf defines euclidean distance between 2 inputs, if both are right on top of each other the max similarity is 1, if too far it's 0. gamma determines how far is too far
+    svr_lin.fit(dates, prices)
+    svr_poly.fit(dates, prices)
+    svr_rbf.ft(dates, prices)
+    
+    plt.scatter(dates, prices, color='black', label='Data')
+    plt.plot(dates, svr_rbf.predict(dates), color= 'red', label='RBF model')
+    plt.plot(dates, svr_lin.predict(dates), color='green', label='Linear model')
+    plt.plot(dates, svr_poly.predict(dates), color='blue', label='Polynomial model')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.title('Support Vector Regression')
+    plt.legend() 
+    plt.show()#displays legend on screen
+    
+    return svr_rbf.predict(x)[0], svr_lin.predict(x)[0], svr_poly.predict(x)[0] #return predictions from each of our models
+
+get_data(HistoricalQuotes)
+
+predicted_price = predict_prices(dates, prices, 29) #store our predicted price for our dates and prices given this date
+print(predicted_price) #print out results for each of our models in the command line
