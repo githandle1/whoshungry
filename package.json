@@ -1,0 +1,13 @@
+{
+  "name": "recipe-tracker",
+  "version": "1.0.0",
+  "description": "A silly recipe tracking app with intentional bugs",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["recipe", "tracking", "silly", "bugs"],
+  "author": "Maya",
+  "license": "MIT"
+}
