@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple WYSIWYG Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .editor-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .editor-header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .editor-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 2px;
+        }
+
+        .toolbar-group:not(:last-child)::after {
+            content: '';
+            width: 1px;
+            height: 24px;
+            background: #d1d5db;
+            margin: 0 8px;
+        }
+
+        .toolbar-btn {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            transition: all 0.2s;
+            min-width: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toolbar-btn:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+
+        .toolbar-btn.active {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+
+        .format-select {
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 6px 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .color-picker {
+            border: none;
+            width: 36px;
+            height: 32px;
+            border-radius: 4px;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .editor-content {
+            min-height: 400px;
+            padding: 20px;
+            border: none;
+            outline: none;
+            font-family: inherit;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #1f2937;
+        }
+
+        .editor-content:empty::before {
+            content: 'Start typing here...';
+            color: #9ca3af;
+            font-style: italic;
+        }
+
+        .editor-footer {
+            padding: 12px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .word-count {
+            font-weight: 500;
+        }
+
+        .save-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .save-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .export-btn {
+            background: #059669;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .export-btn:hover {
+            background: #047857;
+        }
+
+        /* Content styling */
+        .editor-content h1 { font-size: 2em; margin: 0.67em 0; font-weight: bold; }
+        .editor-content h2 { font-size: 1.5em; margin: 0.83em 0; font-weight: bold; }
+        .editor-content h3 { font-size: 1.17em; margin: 1em 0; font-weight: bold; }
+        .editor-content p { margin: 1em 0; }
+        .editor-content ul, .editor-content ol { margin: 1em 0; padding-left: 2em; }
+        .editor-content blockquote { 
+            margin: 1em 0; 
+            padding-left: 1em; 
+            border-left: 3px solid #d1d5db; 
+            color: #6b7280;
+            font-style: italic;
+        }
+        .editor-content code {
+            background: #f3f4f6;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-container">
+        <div class="editor-header">
+            <h1>Simple WYSIWYG Editor</h1>
+        </div>
+        
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <select class="format-select" id="formatSelect">
+                    <option value="p">Paragraph</option>
+                    <option value="h1">Heading 1</option>
+                    <option value="h2">Heading 2</option>
+                    <option value="h3">Heading 3</option>
+                </select>
+            </div>
+            
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="boldBtn" data-command="bold" title="Bold (Ctrl+B)">
+                    <strong>B</strong>
+                </button>
+                <button class="toolbar-btn" id="italicBtn" data-command="italic" title="Italic (Ctrl+I)">
+                    <em>I</em>
+                </button>
+                <button class="toolbar-btn" id="underlineBtn" data-command="underline" title="Underline (Ctrl+U)">
+                    <u>U</u>
+                </button>
+                <button class="toolbar-btn" id="strikeBtn" data-command="strikeThrough" title="Strikethrough">
+                    <s>S</s>
+                </button>
+            </div>
+            
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="alignLeftBtn" data-command="justifyLeft" title="Align Left">
+                    ⬅
+                </button>
+                <button class="toolbar-btn" id="alignCenterBtn" data-command="justifyCenter" title="Align Center">
+                    ↔
+                </button>
+                <button class="toolbar-btn" id="alignRightBtn" data-command="justifyRight" title="Align Right">
+                    ➡
+                </button>
+            </div>
+            
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="bulletBtn" data-command="insertUnorderedList" title="Bullet List">
+                    • List
+                </button>
+                <button class="toolbar-btn" id="numberBtn" data-command="insertOrderedList" title="Numbered List">
+                    1. List
+                </button>
+                <button class="toolbar-btn" id="quoteBtn" data-command="formatBlock" data-value="blockquote" title="Quote">
+                    "
+                </button>
+            </div>
+            
+            <div class="toolbar-group">
+                <input type="color" class="color-picker" id="textColor" title="Text Color" value="#000000">
+                <input type="color" class="color-picker" id="bgColor" title="Background Color" value="#ffffff">
+            </div>
+            
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="linkBtn" title="Insert Link">
+                    🔗
+                </button>
+                <button class="toolbar-btn" id="imageBtn" title="Insert Image">
+                    🖼️
+                </button>
+                <button class="toolbar-btn" id="codeBtn" title="Code">
+                    &lt;/&gt;
+                </button>
+            </div>
+            
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="undoBtn" data-command="undo" title="Undo (Ctrl+Z)">
+                    ↶
+                </button>
+                <button class="toolbar-btn" id="redoBtn" data-command="redo" title="Redo (Ctrl+Y)">
+                    ↷
+                </button>
+            </div>
+        </div>
+        
+        <div class="editor-content" contenteditable="true" id="editor"></div>
+        
+        <div class="editor-footer">
+            <div class="word-count" id="wordCount">0 words</div>
+            <div class="save-status">
+                <div class="save-indicator"></div>
+                <span>Auto-saved</span>
+            </div>
+            <button class="export-btn" id="exportBtn">Export HTML</button>
+        </div>
+    </div>
+
+    <script>
+        class WYSIWYGEditor {
+            constructor() {
+                this.editor = document.getElementById('editor');
+                this.wordCount = document.getElementById('wordCount');
+                this.formatSelect = document.getElementById('formatSelect');
+                
+                this.init();
+                this.bindEvents();
+                this.updateWordCount();
+                this.loadContent();
+            }
+            
+            init() {
+                // Enable design mode for better formatting
+                this.editor.addEventListener('focus', () => {
+                    document.execCommand('defaultParagraphSeparator', false, 'p');
+                });
+            }
+            
+            bindEvents() {
+                // Toolbar buttons
+                document.querySelectorAll('.toolbar-btn[data-command]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const command = btn.dataset.command;
+                        const value = btn.dataset.value || null;
+                        this.executeCommand(command, value);
+                        this.updateToolbarState();
+                    });
+                });
+                
+                // Format selector
+                this.formatSelect.addEventListener('change', (e) => {
+                    this.executeCommand('formatBlock', e.target.value);
+                    this.updateToolbarState();
+                });
+                
+                // Color pickers
+                document.getElementById('textColor').addEventListener('change', (e) => {
+                    this.executeCommand('foreColor', e.target.value);
+                });
+                
+                document.getElementById('bgColor').addEventListener('change', (e) => {
+                    this.executeCommand('backColor', e.target.value);
+                });
+                
+                // Special buttons
+                document.getElementById('linkBtn').addEventListener('click', () => this.insertLink());
+                document.getElementById('imageBtn').addEventListener('click', () => this.insertImage());
+                document.getElementById('codeBtn').addEventListener('click', () => this.insertCode());
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportHTML());
+                
+                // Editor events
+                this.editor.addEventListener('input', () => {
+                    this.updateWordCount();
+                    this.saveContent();
+                });
+                
+                this.editor.addEventListener('keyup', () => {
+                    this.updateToolbarState();
+                });
+                
+                this.editor.addEventListener('mouseup', () => {
+                    this.updateToolbarState();
+                });
+                
+                // Keyboard shortcuts
+                this.editor.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                        switch(e.key) {
+                            case 'b':
+                                e.preventDefault();
+                                this.executeCommand('bold');
+                                break;
+                            case 'i':
+                                e.preventDefault();
+                                this.executeCommand('italic');
+                                break;
+                            case 'u':
+                                e.preventDefault();
+                                this.executeCommand('underline');
+                                break;
+                        }
+                    }
+                });
+            }
+            
+            executeCommand(command, value = null) {
+                this.editor.focus();
+                document.execCommand(command, false, value);
+                this.editor.focus();
+            }
+            
+            updateToolbarState() {
+                // Update button active states
+                const commands = ['bold', 'italic', 'underline', 'strikeThrough'];
+                commands.forEach(command => {
+                    const btn = document.querySelector(`[data-command="${command}"]`);
+                    if (btn) {
+                        btn.classList.toggle('active', document.queryCommandState(command));
+                    }
+                });
+                
+                // Update format select
+                try {
+                    const formatBlock = document.queryCommandValue('formatBlock') || 'p';
+                    this.formatSelect.value = formatBlock.toLowerCase();
+                } catch (e) {
+                    // Handle cases where queryCommandValue fails
+                }
+            }
+            
+            insertLink() {
+                const url = prompt('Enter URL:');
+                if (url) {
+                    this.executeCommand('createLink', url);
+                }
+            }
+            
+            insertImage() {
+                const url = prompt('Enter image URL:');
+                if (url) {
+                    this.executeCommand('insertImage', url);
+                }
+            }
+            
+            insertCode() {
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    const selectedText = range.toString();
+                    
+                    const codeElement = document.createElement('code');
+                    codeElement.textContent = selectedText || 'code here';
+                    
+                    range.deleteContents();
+                    range.insertNode(codeElement);
+                    
+                    // Clear selection and place cursor after code
+                    selection.removeAllRanges();
+                    const newRange = document.createRange();
+                    newRange.setStartAfter(codeElement);
+                    newRange.collapse(true);
+                    selection.addRange(newRange);
+                }
+            }
+            
+            updateWordCount() {
+                const text = this.editor.innerText || this.editor.textContent || '';
+                const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+                this.wordCount.textContent = `${words.length} word${words.length !== 1 ? 's' : ''}`;
+            }
+            
+            saveContent() {
+                // Auto-save to localStorage
+                localStorage.setItem('wysiwyg-content', this.editor.innerHTML);
+            }
+            
+            loadContent() {
+                // Load saved content
+                const saved = localStorage.getItem('wysiwyg-content');
+                if (saved) {
+                    this.editor.innerHTML = saved;
+                    this.updateWordCount();
+                }
+            }
+            
+            exportHTML() {
+                const content = this.editor.innerHTML;
+                const blob = new Blob([content], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'document.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        }
+        
+        // Initialize editor when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new WYSIWYGEditor();
+        });
+    </script>
+</body>
+</html>
