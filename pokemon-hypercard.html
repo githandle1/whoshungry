@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokéCard - A HyperCard Adventure</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Chicago:wght@400&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Chicago', monospace;
+            font-size: 12px;
+            background: #c0c0c0;
+            color: #000;
+            overflow: hidden;
+        }
+
+        .desktop {
+            width: 100vw;
+            height: 100vh;
+            background: #c0c0c0;
+            background-image: 
+                repeating-linear-gradient(45deg, transparent, transparent 1px, rgba(0,0,0,.1) 1px, rgba(0,0,0,.1) 2px);
+            position: relative;
+        }
+
+        .window {
+            position: absolute;
+            background: #fff;
+            border: 2px solid #000;
+            border-right-color: #808080;
+            border-bottom-color: #808080;
+            box-shadow: 2px 2px 0px #808080;
+        }
+
+        .title-bar {
+            height: 20px;
+            background: #000;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            cursor: move;
+        }
+
+        .close-box {
+            width: 12px;
+            height: 12px;
+            border: 1px solid #fff;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .main-window {
+            width: 600px;
+            height: 450px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .card-content {
+            padding: 20px;
+            height: calc(100% - 20px);
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-title {
+            font-weight: bold;
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 20px;
+            text-decoration: underline;
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+        }
+
+        .map-section {
+            flex: 1;
+            border: 2px inset #c0c0c0;
+            padding: 10px;
+            background: #e0e0e0;
+            position: relative;
+        }
+
+        .map-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            height: 100%;
+            gap: 2px;
+        }
+
+        .map-tile {
+            background: #90EE90;
+            border: 1px solid #228B22;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .map-tile:hover {
+            background: #98FB98;
+        }
+
+        .map-tile.water {
+            background: #87CEEB;
+            border-color: #4682B4;
+        }
+
+        .map-tile.mountain {
+            background: #A0522D;
+            border-color: #8B4513;
+        }
+
+        .pokemon-spawn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 16px;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 50%, 100% { transform: translate(-50%, -50%) scale(1); }
+            25% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        .stats-panel {
+            width: 200px;
+            border: 2px inset #c0c0c0;
+            padding: 10px;
+            background: #e0e0e0;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 11px;
+        }
+
+        .button {
+            background: #c0c0c0;
+            border: 2px outset #c0c0c0;
+            padding: 4px 12px;
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            margin: 4px 2px;
+        }
+
+        .button:active {
+            border-style: inset;
+        }
+
+        .button:disabled {
+            color: #808080;
+            cursor: not-allowed;
+        }
+
+        .caught-pokemon {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px inset #c0c0c0;
+            padding: 5px;
+            margin-top: 10px;
+            background: #fff;
+        }
+
+        .pokemon-item {
+            font-size: 10px;
+            margin-bottom: 2px;
+            padding: 2px;
+            background: #f0f0f0;
+            border: 1px solid #d0d0d0;
+        }
+
+        .message-area {
+            height: 60px;
+            border: 2px inset #c0c0c0;
+            padding: 8px;
+            background: #fff;
+            margin-top: 10px;
+            font-size: 11px;
+            overflow-y: auto;
+        }
+
+        .hypercard-nav {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .nav-button {
+            width: 30px;
+            height: 20px;
+            background: #c0c0c0;
+            border: 1px outset #c0c0c0;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-button:active {
+            border-style: inset;
+        }
+
+        .catch-animation {
+            position: fixed;
+            pointer-events: none;
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff6b6b;
+            text-shadow: 1px 1px 0px #fff;
+            z-index: 1000;
+            animation: catchFloat 2s ease-out forwards;
+        }
+
+        @keyframes catchFloat {
+            0% { 
+                opacity: 1; 
+                transform: translateY(0px) scale(1);
+            }
+            100% { 
+                opacity: 0; 
+                transform: translateY(-50px) scale(1.5);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="desktop">
+        <div class="window main-window">
+            <div class="title-bar">
+                <div class="close-box"></div>
+                PokéCard Adventure - Location: Pallet Town
+            </div>
+            <div class="card-content">
+                <div class="card-title">Pokémon Collection Quest</div>
+                
+                <div class="game-area">
+                    <div class="map-section">
+                        <div class="map-grid" id="mapGrid">
+                            <!-- Map tiles will be generated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="stats-panel">
+                        <div class="stat-row">
+                            <span>Caught:</span>
+                            <span id="caughtCount">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Pokéballs:</span>
+                            <span id="pokeballCount">10</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Score:</span>
+                            <span id="score">0</span>
+                        </div>
+                        
+                        <button class="button" id="scanButton">Scan Area</button>
+                        <button class="button" id="restockButton">Buy Pokéballs</button>
+                        
+                        <div class="caught-pokemon" id="caughtList">
+                            <div style="text-align: center; color: #808080; font-size: 10px;">
+                                No Pokémon caught yet...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="message-area" id="messageArea">
+                    Welcome to PokéCard! Click on grass tiles to search for Pokémon. Use the Scan Area button to reveal nearby creatures.
+                </div>
+                
+                <div class="hypercard-nav">
+                    <div class="nav-button" id="prevCard">◀</div>
+                    <div class="nav-button" id="nextCard">▶</div>
+                    <div class="nav-button" id="homeCard">⌂</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class PokemonHyperCard {
+            constructor() {
+                this.pokeballs = 10;
+                this.score = 0;
+                this.caughtPokemon = [];
+                this.activePokemon = new Map();
+                this.messageHistory = [];
+                
+                this.pokemonTypes = [
+                    { name: 'Pikachu', emoji: '⚡', rarity: 0.15, points: 100 },
+                    { name: 'Bulbasaur', emoji: '🌱', rarity: 0.2, points: 80 },
+                    { name: 'Charmander', emoji: '🔥', rarity: 0.2, points: 80 },
+                    { name: 'Squirtle', emoji: '💧', rarity: 0.2, points: 80 },
+                    { name: 'Caterpie', emoji: '🐛', rarity: 0.4, points: 20 },
+                    { name: 'Pidgey', emoji: '🐦', rarity: 0.35, points: 30 },
+                    { name: 'Rattata', emoji: '🐭', rarity: 0.4, points: 25 },
+                    { name: 'Magikarp', emoji: '🐟', rarity: 0.5, points: 10 },
+                    { name: 'Psyduck', emoji: '🦆', rarity: 0.25, points: 60 },
+                    { name: 'Geodude', emoji: '🗿', rarity: 0.3, points: 50 }
+                ];
+                
+                this.init();
+            }
+            
+            init() {
+                this.createMap();
+                this.bindEvents();
+                this.updateUI();
+                this.addMessage("Welcome, Trainer! Your adventure begins now.");
+                
+                setInterval(() => this.spawnRandomPokemon(), 3000);
+                setInterval(() => this.cleanupOldPokemon(), 8000);
+            }
+            
+            createMap() {
+                const mapGrid = document.getElementById('mapGrid');
+                mapGrid.innerHTML = '';
+                
+                for (let i = 0; i < 48; i++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'map-tile';
+                    tile.dataset.index = i;
+                    
+                    const rand = Math.random();
+                    if (rand < 0.1) {
+                        tile.classList.add('water');
+                    } else if (rand < 0.15) {
+                        tile.classList.add('mountain');
+                    }
+                    
+                    tile.addEventListener('click', (e) => this.searchTile(e.target));
+                    mapGrid.appendChild(tile);
+                }
+            }
+            
+            bindEvents() {
+                document.getElementById('scanButton').addEventListener('click', () => this.scanArea());
+                document.getElementById('restockButton').addEventListener('click', () => this.buyPokeballs());
+                document.getElementById('prevCard').addEventListener('click', () => this.navigateCard('prev'));
+                document.getElementById('nextCard').addEventListener('click', () => this.navigateCard('next'));
+                document.getElementById('homeCard').addEventListener('click', () => this.navigateCard('home'));
+            }
+            
+            searchTile(tile) {
+                if (this.pokeballs <= 0) {
+                    this.addMessage("No Pokéballs left! Buy more to continue hunting.");
+                    return;
+                }
+                
+                const pokemonSpawn = tile.querySelector('.pokemon-spawn');
+                if (pokemonSpawn) {
+                    this.attemptCatch(tile, pokemonSpawn.dataset.pokemon);
+                } else {
+                    const searchChance = Math.random();
+                    if (searchChance < 0.3) {
+                        this.spawnPokemonOnTile(tile);
+                        this.addMessage("Something rustles in the grass...");
+                    } else {
+                        this.addMessage("You search the area but find nothing.");
+                    }
+                }
+            }
+            
+            spawnRandomPokemon() {
+                const tiles = document.querySelectorAll('.map-tile:not(.water):not(.mountain)');
+                const availableTiles = Array.from(tiles).filter(tile => !tile.querySelector('.pokemon-spawn'));
+                
+                if (availableTiles.length > 0 && Math.random() < 0.4) {
+                    const randomTile = availableTiles[Math.floor(Math.random() * availableTiles.length)];
+                    this.spawnPokemonOnTile(randomTile);
+                }
+            }
+            
+            spawnPokemonOnTile(tile) {
+                if (tile.querySelector('.pokemon-spawn')) return;
+                
+                const pokemon = this.getRandomPokemon();
+                const spawn = document.createElement('div');
+                spawn.className = 'pokemon-spawn';
+                spawn.textContent = pokemon.emoji;
+                spawn.dataset.pokemon = JSON.stringify(pokemon);
+                spawn.title = pokemon.name;
+                
+                tile.appendChild(spawn);
+                this.activePokemon.set(tile.dataset.index, Date.now());
+            }
+            
+            getRandomPokemon() {
+                const rand = Math.random();
+                for (const pokemon of this.pokemonTypes) {
+                    if (rand < pokemon.rarity) {
+                        return pokemon;
+                    }
+                }
+                return this.pokemonTypes[this.pokemonTypes.length - 1];
+            }
+            
+            attemptCatch(tile, pokemonData) {
+                const pokemon = JSON.parse(pokemonData);
+                this.pokeballs--;
+                
+                const catchChance = 0.7 - (pokemon.rarity * 0.3);
+                const success = Math.random() < catchChance;
+                
+                if (success) {
+                    this.catchPokemon(pokemon, tile);
+                    this.showCatchAnimation(tile, `Caught ${pokemon.name}!`);
+                    this.addMessage(`Success! You caught a ${pokemon.name}! (+${pokemon.points} pts)`);
+                    this.score += pokemon.points;
+                } else {
+                    this.addMessage(`${pokemon.name} broke free! Try again.`);
+                    this.showCatchAnimation(tile, `${pokemon.name} escaped!`);
+                }
+                
+                this.updateUI();
+            }
+            
+            catchPokemon(pokemon, tile) {
+                this.caughtPokemon.push({
+                    ...pokemon,
+                    caughtAt: new Date().toLocaleTimeString(),
+                    location: this.getTileLocation(tile)
+                });
+                
+                const spawn = tile.querySelector('.pokemon-spawn');
+                if (spawn) {
+                    spawn.remove();
+                }
+                
+                this.activePokemon.delete(tile.dataset.index);
+                this.updateCaughtList();
+            }
+            
+            getTileLocation(tile) {
+                const index = parseInt(tile.dataset.index);
+                const row = Math.floor(index / 8);
+                const col = index % 8;
+                return `(${col + 1}, ${row + 1})`;
+            }
+            
+            showCatchAnimation(tile, text) {
+                const rect = tile.getBoundingClientRect();
+                const animation = document.createElement('div');
+                animation.className = 'catch-animation';
+                animation.textContent = text;
+                animation.style.left = (rect.left + rect.width / 2) + 'px';
+                animation.style.top = rect.top + 'px';
+                
+                document.body.appendChild(animation);
+                setTimeout(() => animation.remove(), 2000);
+            }
+            
+            scanArea() {
+                if (this.pokeballs < 2) {
+                    this.addMessage("Need at least 2 Pokéballs to scan!");
+                    return;
+                }
+                
+                this.pokeballs -= 2;
+                
+                const tiles = document.querySelectorAll('.map-tile:not(.water):not(.mountain)');
+                const emptyTiles = Array.from(tiles).filter(tile => !tile.querySelector('.pokemon-spawn'));
+                
+                const spawnCount = Math.min(3, emptyTiles.length);
+                for (let i = 0; i < spawnCount; i++) {
+                    const randomTile = emptyTiles.splice(Math.floor(Math.random() * emptyTiles.length), 1)[0];
+                    this.spawnPokemonOnTile(randomTile);
+                }
+                
+                this.addMessage(`Radar scan complete! Found ${spawnCount} Pokémon nearby.`);
+                this.updateUI();
+            }
+            
+            buyPokeballs() {
+                if (this.score >= 50) {
+                    this.score -= 50;
+                    this.pokeballs += 5;
+                    this.addMessage("Purchased 5 Pokéballs for 50 points!");
+                } else {
+                    this.addMessage("Need 50 points to buy Pokéballs!");
+                }
+                this.updateUI();
+            }
+            
+            cleanupOldPokemon() {
+                const now = Date.now();
+                this.activePokemon.forEach((spawnTime, tileIndex) => {
+                    if (now - spawnTime > 10000) {
+                        const tile = document.querySelector(`[data-index="${tileIndex}"]`);
+                        const spawn = tile?.querySelector('.pokemon-spawn');
+                        if (spawn) {
+                            spawn.remove();
+                        }
+                        this.activePokemon.delete(tileIndex);
+                    }
+                });
+            }
+            
+            updateUI() {
+                document.getElementById('caughtCount').textContent = this.caughtPokemon.length;
+                document.getElementById('pokeballCount').textContent = this.pokeballs;
+                document.getElementById('score').textContent = this.score;
+                
+                document.getElementById('scanButton').disabled = this.pokeballs < 2;
+                document.getElementById('restockButton').disabled = this.score < 50;
+            }
+            
+            updateCaughtList() {
+                const list = document.getElementById('caughtList');
+                if (this.caughtPokemon.length === 0) {
+                    list.innerHTML = '<div style="text-align: center; color: #808080; font-size: 10px;">No Pokémon caught yet...</div>';
+                } else {
+                    list.innerHTML = this.caughtPokemon.map(pokemon => 
+                        `<div class="pokemon-item">${pokemon.emoji} ${pokemon.name} - ${pokemon.caughtAt}</div>`
+                    ).join('');
+                }
+            }
+            
+            addMessage(message) {
+                this.messageHistory.push(`${new Date().toLocaleTimeString()}: ${message}`);
+                if (this.messageHistory.length > 10) {
+                    this.messageHistory.shift();
+                }
+                
+                const messageArea = document.getElementById('messageArea');
+                messageArea.innerHTML = this.messageHistory.join('<br>');
+                messageArea.scrollTop = messageArea.scrollHeight;
+            }
+            
+            navigateCard(direction) {
+                const messages = {
+                    'prev': 'Previous card: Pokédex entries',
+                    'next': 'Next card: Training grounds',
+                    'home': 'Returned to main adventure card'
+                };
+                this.addMessage(messages[direction]);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            new PokemonHyperCard();
+        });
+    </script>
+</body>
+</html>
